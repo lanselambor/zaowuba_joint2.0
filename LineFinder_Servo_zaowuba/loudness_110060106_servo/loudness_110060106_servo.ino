@@ -1,17 +1,17 @@
 /*
 * Groot.ino
 * A demo for ChaiHuo ZaoWuBa Demo T14006
-* 
+*
 * Copyright (c) 2015 Seeed Technology Inc.
 * Auther     : Jacob.Yan
 * Create Time: Jan 07, 2015
 * Change Log :
-* 
+*
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
 * License as published by the Free Software Foundation; either
 * version 2.1 of the License, or (at your option) any later version.
-* 
+*
 * This library is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
@@ -27,68 +27,72 @@
  */
 #include <avr/wdt.h>
 
+#define VERSION "joint v2.0"
+#define NAME    "loudness servo"
+#define SKU     "110060106"
+
 class WatchDog
 {
   public:
     //initial watchdog timeout
     WatchDog(long timeout = 2000){
       _timeout = timeout;
-    } 
-    
+    }
+
     //method
     void watchdogSetup(void){
-      cli();  
-      wdt_reset(); 
-      MCUSR &= ~(1<<WDRF);  
+      cli();
+      wdt_reset();
+      MCUSR &= ~(1<<WDRF);
       WDTCSR = (1<<WDCE) | (1<<WDE);
       WDTCSR = (1<<WDIE) | (0<<WDP3) | (1<<WDP2) | (1<<WDP1) | (0<<WDP0);
       sei();
     }
-    
+
     void doggieTickle(void){
       ResetTime = millis();
     }
-    
+
     //reset
-    void(* resetFunc) (void) = 0;     
-    
+    void(* resetFunc) (void) = 0;
+
     //parameters
     unsigned long ResetTime;
     volatile bool  Flg_Power;
     long _timeout;
-    
+
 };
 
 WatchDog WTD;
 
-ISR(WDT_vect) 
-{   
+ISR(WDT_vect)
+{
   if(millis() - WTD.ResetTime > WTD._timeout)
-  {    
-    WTD.doggieTickle();                                          
-    WTD.resetFunc();     
-  }  
+  {
+    WTD.doggieTickle();
+    WTD.resetFunc();
+  }
 }
 /******************* End of WatchDog ********************/
 
 #include <Wire.h>
 #include <Servo.h>
- 
+
 #define  DEBUG   0
 
 #define BUTTON         2
 #define LIGHT_SENSOR   A0
 #define CHRG_LED       A3  //low-level work
-#define PWR_HOLD       A1  
+#define PWR_HOLD       A1
 #define PWR            6   //low-level work
 #define KEY            2
-#define LED            10  
+#define LED            10
 #define OUT_PIN1       3   //normal output pin
 #define OUT_PIN2       5
 #define IN_PIN1        A5  //normal input pin
 #define IN_PIN2        A4
 
-#define original_pos 90 
+#define original_pos 90
 // Servo position begin value
 #define pos_begin  80
 // Servo position end value
@@ -100,18 +104,18 @@ Servo myservo;
 const int pin_sound = A5;
 
 //sound analog value
-int quiet_value = 0; 
+int quiet_value = 0;
 int val_sound = 0;
 
-//value off the thershold, 
+//value off the thershold,
 int thershold_off = 50;
 //sound threshold
-int Threshold[5] = {40 + thershold_off, 
-                    60 + thershold_off, 
+int Threshold[5] = {40 + thershold_off,
+                    60 + thershold_off,
                     80 + thershold_off,
-                    100 + thershold_off, 
+                    100 + thershold_off,
                     120 + thershold_off};
-   
+
 
 const long interval = 50;
 unsigned long previousMillis = 0;
@@ -127,7 +131,7 @@ void servoRun(int analog)
 {
   int dec = 0;
   if(analog < 200)
-  {  
+  {
     dec = map(analog, thershold_off, 200, 2, 30);
   }
   else
@@ -143,7 +147,7 @@ void servoRun(int analog)
 void delay_feed( int val)
 {
   delay(val);
-  WTD.doggieTickle(); 
+  WTD.doggieTickle();
 }
 
 int mid_filter(int analog_pin)
@@ -154,7 +158,7 @@ int mid_filter(int analog_pin)
   delayMicroseconds(10);
   int c = analogRead(analog_pin);
   delayMicroseconds(10);
-  
+
   return midNum(&a, &b, &c);
 }
 
@@ -163,8 +167,8 @@ int average_filter(int analog_pin, int num)
   long temp = 0;
   for(int i=0;i<num;i++)
   {
-    //temp += analogRead(analog_pin);    
-    temp += mid_filter(analog_pin);    
+    //temp += analogRead(analog_pin);
+    temp += mid_filter(analog_pin);
   }
   return temp/num;
 }
@@ -191,12 +195,21 @@ int midNum(int *a, int *b, int *c)
 }
 
 void setup()
-{ 
+{
+  Serial.begin(9600);
+  Serial.print("Name: ");
+  Serial.println(NAME);
+  Serial.print("SKU: ");
+  Serial.println(SKU);
+  Serial.print("Version: ");
+  Serial.println(VERSION);
+  delay(100);
+
   //power up
   pinMode(CHRG_LED, OUTPUT);
   digitalWrite(CHRG_LED, LOW);
-  
-  //initial watchdog  
+
+  //initial watchdog
   WTD.watchdogSetup();
   WTD.doggieTickle();
 
@@ -214,34 +227,32 @@ void setup()
   {
     analogWrite(10,5);
     delay(500);
-    analogWrite(10,0);     
-    delay(500);  
+    analogWrite(10,0);
+    delay(500);
     WTD.doggieTickle();
-  } 
+  }
 
-  #if DEBUG  
+  #if DEBUG
   Serial.begin(9600);
   Serial.println("start");
-  #endif    
+  #endif
 
   myservo.attach(3);  //    mini fan use pin 9   joint use pin 3
   previousMillis = millis();
-  myservo.write(90); 
+  myservo.write(90);
 
 }
 
 void loop()
-{  
-  WTD.doggieTickle();                 
-  val_sound = average_filter(pin_sound, 50);       
+{
+  WTD.doggieTickle();
+  val_sound = average_filter(pin_sound, 50);
   int threshold = val_sound - quiet_value;
   if(threshold > thershold_off)
   {
     Serial.println(threshold);
     servoRun(threshold);
-  }              
-  WTD.doggieTickle();   
-  delay(200);  
+  }
+  WTD.doggieTickle();
+  delay(200);
 }
-
-

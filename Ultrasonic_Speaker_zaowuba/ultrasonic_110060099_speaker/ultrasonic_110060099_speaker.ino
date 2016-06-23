@@ -1,17 +1,17 @@
 /*
 * Digital Sand Clock.ino
 * A demo for ChaiHuo ZaoWuBa Demo
-* 
+*
 * Copyright (c) 2015 Seeed Technology Inc.
 * Auther     : Lambor.Fang
 * Create Time: May 2015
 * Change Log :
-* 
+*
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public
 * License as published by the Free Software Foundation; either
 * version 2.1 of the License, or (at your option) any later version.
-* 
+*
 * This library is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
@@ -27,47 +27,51 @@
  */
 #include <avr/wdt.h>
 
+#define VERSION "joint v2.0"
+#define NAME    "ultrasonic speaker"
+#define SKU     "110060099"
+
 class WatchDog
 {
   public:
     //initial watchdog timeout
     WatchDog(long timeout = 2000){
       _timeout = timeout;
-    } 
-    
+    }
+
     //method
     void watchdogSetup(void){
-      cli();  
-      wdt_reset(); 
-      MCUSR &= ~(1<<WDRF);  
+      cli();
+      wdt_reset();
+      MCUSR &= ~(1<<WDRF);
       WDTCSR = (1<<WDCE) | (1<<WDE);
       WDTCSR = (1<<WDIE) | (0<<WDP3) | (1<<WDP2) | (1<<WDP1) | (0<<WDP0);
       sei();
     }
-    
+
     void doggieTickle(void){
       ResetTime = millis();
     }
-    
+
     //reset
-    void(* resetFunc) (void) = 0;     
-    
+    void(* resetFunc) (void) = 0;
+
     //parameters
     unsigned long ResetTime;
     volatile bool  Flg_Power;
     long _timeout;
-    
+
 };
 
 WatchDog WTD;
 
-ISR(WDT_vect) 
-{   
+ISR(WDT_vect)
+{
   if(millis() - WTD.ResetTime > WTD._timeout)
-  {    
-    WTD.doggieTickle();                                          
-    WTD.resetFunc();     
-  }  
+  {
+    WTD.doggieTickle();
+    WTD.resetFunc();
+  }
 }
 /******************* End of WatchDog ********************/
 
@@ -81,7 +85,7 @@ class Ultrasonic
     {
       _pin = pin;
     }
-    
+
 		long MeasureInCentimeters(void)
     {
       pinMode(_pin, OUTPUT);
@@ -97,7 +101,7 @@ class Ultrasonic
       RangeInCentimeters = duration/29/2;
       return RangeInCentimeters;
     }
-    
+
 		long MeasureInInches(void)
     {
       pinMode(_pin, OUTPUT);
@@ -113,7 +117,7 @@ class Ultrasonic
       RangeInInches = duration/74/2;
       return RangeInInches;
     }
-    
+
 	private:
 		int _pin;  //pin number of Arduino that is connected with SIG pin of Ultrasonic Ranger.
 };
@@ -126,10 +130,10 @@ class Ultrasonic
 #define BUTTON         2
 #define LIGHT_SENSOR   A0
 #define CHRG_LED       A3  //low-level work
-#define PWR_HOLD       A1  
+#define PWR_HOLD       A1
 #define PWR            6   //low-level work
 #define KEY            2
-#define LED            10  
+#define LED            10
 #define OUT_PIN1       3   //normal output pin
 #define OUT_PIN2       5
 #define IN_PIN1        A5  //normal input pin
@@ -155,59 +159,67 @@ unsigned int noteDurations = 50 ;
 void Gamut_Play(unsigned char data)
 {
   switch(data)
-  {      
+  {
     case 1:
       tone(PWM_OUT_PIN,523,noteDurations);//Do(523Hz)NOTE_C5
-      break;        
+      break;
     case 2:
       tone(PWM_OUT_PIN,587,noteDurations);//Re(587Hz)NOTE_D5
-      break;        
+      break;
     case 3:
       tone(PWM_OUT_PIN,659,noteDurations);//Mi(659Hz)NOTE_E5
-      break;        
+      break;
     case 4:
       tone(PWM_OUT_PIN,698,noteDurations);//Fa(698Hz)NOTE_F5
-      break;        
+      break;
     case 5:
       tone(PWM_OUT_PIN,784,noteDurations);//So(784Hz)NOTE_G5
-      break;        
+      break;
     case 6:
       tone(PWM_OUT_PIN,880,noteDurations);//La(880Hz)NOTE_A5
-      break;       
+      break;
     case 7:
       tone(PWM_OUT_PIN,988,noteDurations);//Si(988Hz)NOTE_B5
-      break;       
+      break;
     case 8:
       tone(PWM_OUT_PIN,1047,noteDurations);//Do(1047Hz)NOTE_C6
-      break;             
+      break;
     default:
-      break;         
+      break;
   }
 }
 
 void setup()
-{ 
+{
+  Serial.begin(9600);
+  Serial.print("Name: ");
+  Serial.println(NAME);
+  Serial.print("SKU: ");
+  Serial.println(SKU);
+  Serial.print("Version: ");
+  Serial.println(VERSION);
+  delay(100);
 
   WTD.watchdogSetup();
   WTD.doggieTickle();
-  
-  pinMode(CHRG_LED, OUTPUT);  //open power led 
+
+  pinMode(CHRG_LED, OUTPUT);  //open power led
   digitalWrite(CHRG_LED, LOW);
-  
+
   //The shining led
-  pinMode (10,OUTPUT);   
+  pinMode (10,OUTPUT);
   for(int i=0;i<2;i++)
   {
     analogWrite(10,5);  //10 is pwm output duty/256
     delay(500);
-    analogWrite(10,0);     
-    delay(500);  
+    analogWrite(10,0);
+    delay(500);
     WTD.doggieTickle();
-  }  
-#if DeBug  
+  }
+#if DeBug
   Serial.begin(9600);
   Serial.println("start");
-#endif    
+#endif
 
 }
 
@@ -217,12 +229,12 @@ void loop()
   unsigned char airGamutValue = 0;
   unsigned int ultrasonicAirDistance = 0;
 
-  WTD.doggieTickle(); 
-    
+  WTD.doggieTickle();
+
   while(1)
-  {                
-    ultrasonicAirDistance = ultrasonicAir.MeasureInCentimeters(); 
-    
+  {
+    ultrasonicAirDistance = ultrasonicAir.MeasureInCentimeters();
+
     if     ((ultrasonicAirDistance>DISTANCE1)&&(ultrasonicAirDistance<=DISTANCE2))airGamutValue = 1;
     else if((ultrasonicAirDistance>DISTANCE2)&&(ultrasonicAirDistance<=DISTANCE3))airGamutValue = 2;
     else if((ultrasonicAirDistance>DISTANCE3)&&(ultrasonicAirDistance<=DISTANCE4))airGamutValue = 3;
@@ -232,20 +244,16 @@ void loop()
     else if((ultrasonicAirDistance>DISTANCE7)&&(ultrasonicAirDistance<=DISTANCE8))airGamutValue = 7;
     else if((ultrasonicAirDistance>DISTANCE8)&&(ultrasonicAirDistance<=DISTANCE9))airGamutValue = 8;
     else airGamutValue = 0;
-    
+
     if(airGamutValue>0)
     {
-#if DeBug             
-      Serial.print("Air Gamut Value is:"); 
-      Serial.println(airGamutValue); 
-#endif             
+#if DeBug
+      Serial.print("Air Gamut Value is:");
+      Serial.println(airGamutValue);
+#endif
       Gamut_Play(airGamutValue);
     }
-    delay(30);      
-    WTD.doggieTickle();   
+    delay(30);
+    WTD.doggieTickle();
   }
 }
-
-
-
-
